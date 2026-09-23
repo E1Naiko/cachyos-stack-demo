@@ -53,6 +53,55 @@ cachyos-stack-demo/
     └── index.html            # Documento HTML inicial
 ```
 
+## 3. Archivo por archivo
+
+Esta es la función de cada archivo versionado del proyecto. Los archivos generados o locales, como `backend/.env`, `backend/.venv` y `frontend/node_modules`, no forman parte del código fuente y no deben editarse manualmente.
+
+### Archivos de la raíz
+
+- **`README.md`**: punto de entrada para una persona que clona el repositorio. Explica el stack, la instalación en CachyOS, el arranque manual, los endpoints, Alembic, PyCharm y los problemas habituales.
+- **`GUIA_RAPIDA_CACHYOS.md`**: resumen operativo para preparar rápidamente CachyOS, PostgreSQL y el proyecto. Sirve como atajo; el README contiene el contexto más completo.
+- **`setup-cachyos.sh`**: script Bash de instalación. Comprueba comandos disponibles, inicializa y arranca PostgreSQL, crea `devuser` y `testdb`, prepara el entorno virtual Python, instala dependencias, ejecuta migraciones y prepara el frontend. No contiene lógica de la aplicación: automatiza el entorno.
+- **`init-git.sh`**: script auxiliar para inicializar o preparar el repositorio Git local. No participa en la ejecución de React, FastAPI ni PostgreSQL.
+- **`.gitignore`**: indica a Git qué archivos locales no debe versionar, como entornos virtuales, dependencias instaladas, archivos `.env` y caches.
+
+### Documentación
+
+- **`docs/GUIA_ESTUDIO.md`**: este documento. Explica el propósito de cada archivo y la relación entre las capas.
+- **`docs/ARQUITECTURA.md`**: referencia técnica más compacta sobre estructura, flujo de datos, endpoints y cómo extender el modelo.
+
+### Archivos del backend
+
+- **`backend/README_BACKEND.md`**: instrucciones específicas para ejecutar el backend y descripción resumida de sus capas.
+- **`backend/requirements.txt`**: lista y fija las versiones de las dependencias Python: FastAPI, Uvicorn, SQLAlchemy, Alembic, el driver de PostgreSQL, Pydantic y sus utilidades. `pip install -r requirements.txt` instala todo lo declarado aquí.
+- **`backend/.env.example`**: plantilla de variables de entorno del backend. Define la URL de PostgreSQL, el entorno, la clave secreta y los orígenes CORS permitidos. Se copia como `.env`; no es la configuración activa por sí misma.
+- **`backend/alembic.ini`**: configuración general de Alembic, como la ubicación del directorio de migraciones, el nombre de la sección SQLAlchemy y el formato de logs. `alembic/env.py` completa dinámicamente la URL de conexión.
+- **`backend/app/__init__.py`**: marca `app` como paquete Python. Está vacío porque el paquete no necesita ejecutar código al importarse.
+- **`backend/app/config.py`**: define `Settings` y carga la configuración desde variables de entorno o `.env`. También convierte los orígenes CORS en una lista.
+- **`backend/app/database.py`**: crea el engine de SQLAlchemy, la fábrica de sesiones y la clase base de los modelos. `get_db` entrega y cierra una sesión por request.
+- **`backend/app/models.py`**: define el modelo ORM `Item`, que representa la tabla `items` y sus columnas en PostgreSQL.
+- **`backend/app/schemas.py`**: define los modelos Pydantic usados para validar bodies de entrada y serializar respuestas (`ItemCreate`, `ItemUpdate` e `ItemOut`).
+- **`backend/app/crud.py`**: contiene las consultas de crear, listar, obtener, actualizar y eliminar items. Aísla la persistencia de los endpoints.
+- **`backend/app/main.py`**: crea la aplicación FastAPI, configura CORS, define las rutas HTTP, inyecta sesiones y traduce objetos o errores CRUD a respuestas HTTP.
+
+### Archivos de Alembic
+
+- **`backend/alembic/env.py`**: punto de configuración que Alembic ejecuta. Importa `Base` y los modelos para que `--autogenerate` conozca el esquema, obtiene `DATABASE_URL` y define migraciones online u offline.
+- **`backend/alembic/script.py.mako`**: plantilla que Alembic usa para generar nuevos archivos de migración. Define el encabezado y las funciones vacías `upgrade` y `downgrade`; normalmente no se edita para una migración individual.
+- **`backend/alembic/versions/001_create_items.py`**: primera migración del proyecto. `upgrade` crea `items` e índices; `downgrade` los elimina.
+
+### Archivos del frontend
+
+- **`frontend/package.json`**: manifiesto de npm. Declara el nombre del proyecto, dependencias y scripts `dev`, `build`, `preview` y `lint`.
+- **`frontend/package-lock.json`**: bloqueo reproducible de las versiones exactas de dependencias instaladas por npm. Normalmente se modifica mediante `npm install`, no a mano.
+- **`frontend/.env.example`**: plantilla de `VITE_API_URL`, que permite indicar dónde está la API durante el desarrollo.
+- **`frontend/index.html`**: documento HTML mínimo que contiene `#root`, el nodo donde React monta la aplicación.
+- **`frontend/vite.config.js`**: configura el plugin de React, el host y puerto de Vite, los hosts permitidos y el proxy de `/api` y `/health` hacia FastAPI.
+- **`frontend/src/main.jsx`**: punto de entrada JavaScript. Importa React, `App` y los estilos, y monta el componente raíz con `ReactDOM.createRoot`.
+- **`frontend/src/App.jsx`**: componente principal. Controla el estado, carga items, gestiona el formulario, alterna el estado terminado, elimina items y renderiza la pantalla.
+- **`frontend/src/api.js`**: capa de comunicación HTTP. Contiene una función por operación de la API y centraliza la comprobación de errores y la conversión de JSON.
+- **`frontend/src/App.css`**: estilos globales y estilos de los componentes visuales: layout, tarjetas, formulario, lista, botones, estados y mensajes. No contiene lógica de negocio.
+
 ## 3. Backend: configuración
 
 ### `backend/app/config.py`
