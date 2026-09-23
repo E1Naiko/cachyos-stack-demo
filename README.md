@@ -239,6 +239,12 @@ cachyos-stack-demo/
 
 ---
 
+## 8) Documentación del código
+
+La guía técnica [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) explica la estructura de carpetas, las responsabilidades de cada módulo, el flujo React → FastAPI → SQLAlchemy → PostgreSQL, los endpoints y cómo extender el ejemplo.
+
+También se añadieron docstrings en los módulos Python para que el código sea navegable desde PyCharm y herramientas de documentación.
+
 ## 8) Comandos útiles
 
 ```bash

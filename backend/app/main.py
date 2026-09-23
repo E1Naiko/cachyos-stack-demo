@@ -1,3 +1,5 @@
+"""Punto de entrada de la API HTTP del demo."""
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -24,6 +26,7 @@ app.add_middleware(
 
 @app.get("/")
 def root():
+    """Devuelve enlaces útiles para descubrir la API."""
     return {
         "message": "API CachyOS Stack Demo OK",
         "docs": "/docs",
@@ -33,6 +36,7 @@ def root():
 
 @app.get("/health")
 def health(db: Session = Depends(get_db)):
+    """Comprueba que el proceso responde y que PostgreSQL está accesible."""
     try:
         db.execute(text("SELECT 1"))
         db_status = "ok"
@@ -43,14 +47,17 @@ def health(db: Session = Depends(get_db)):
 # CRUD Items
 @app.get("/api/items", response_model=list[schemas.ItemOut])
 def list_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """Lista items usando paginación simple."""
     return crud.get_items(db, skip=skip, limit=limit)
 
 @app.post("/api/items", response_model=schemas.ItemOut, status_code=201)
 def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
+    """Valida y persiste un item nuevo."""
     return crud.create_item(db, item)
 
 @app.get("/api/items/{item_id}", response_model=schemas.ItemOut)
 def get_item(item_id: int, db: Session = Depends(get_db)):
+    """Obtiene un item o responde con 404."""
     db_item = crud.get_item(db, item_id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item no encontrado")
@@ -58,6 +65,7 @@ def get_item(item_id: int, db: Session = Depends(get_db)):
 
 @app.put("/api/items/{item_id}", response_model=schemas.ItemOut)
 def update_item(item_id: int, item: schemas.ItemUpdate, db: Session = Depends(get_db)):
+    """Actualiza parcialmente un item o responde con 404."""
     db_item = crud.update_item(db, item_id, item)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item no encontrado")
@@ -65,6 +73,7 @@ def update_item(item_id: int, item: schemas.ItemUpdate, db: Session = Depends(ge
 
 @app.delete("/api/items/{item_id}")
 def delete_item(item_id: int, db: Session = Depends(get_db)):
+    """Elimina un item o responde con 404."""
     db_item = crud.delete_item(db, item_id)
     if not db_item:
         raise HTTPException(status_code=404, detail="Item no encontrado")
