@@ -1,94 +1,150 @@
-# CachyOS Stack Demo — React + Python + PostgreSQL + SQLAlchemy + Alembic
+# Full Stack Demo — React + FastAPI + PostgreSQL
 
-Repo de prueba completo listo para tu máquina CachyOS (Arch). Probado con Python 3.14, Node 26, PostgreSQL 18.
+Repositorio educativo para estudiar y probar la integración de un frontend React con una API FastAPI, PostgreSQL como base de datos, SQLAlchemy como ORM y Alembic para gestionar migraciones.
 
-## Stack
-- **Frontend:** React + Vite
-- **Backend:** Python 3.14 + FastAPI + SQLAlchemy 2.0 + Alembic + psycopg2-binary
-- **DB:** PostgreSQL 18
-- **IDE:** PyCharm (Professional o Community)
+El proyecto implementa una aplicación pequeña de items para mostrar el recorrido completo de los datos:
 
----
-
-## 0) Qué te faltó en tu instalación
-
-Tu log dice:
-
-> `"/var/lib/postgres/data" is missing or empty. Use initdb...`
-
-En CachyOS/Arch PostgreSQL no se auto-inicializa. Tenés que hacer `initdb` y habilitar el servicio. El script `setup-cachyos.sh` ya hace todo.
-
----
-
-## 1) Setup en 3 comandos (en tu máquina CachyOS)
-
-Abre una terminal en la carpeta donde vas a clonar este repo:
-
-```bash
-# 1. Inicializar PostgreSQL (solo la primera vez en tu vida en esa máquina)
-sudo -u postgres initdb --locale=C.UTF-8 --encoding=UTF8 -D '/var/lib/postgres/data'
-sudo systemctl enable --now postgresql
-sudo systemctl status postgresql  # debe decir active (running)
-
-# 2. Crear DB y usuario de prueba
-sudo -u postgres psql -c "CREATE USER devuser WITH PASSWORD 'devpass' CREATEDB;"
-sudo -u postgres psql -c "CREATE DATABASE testdb OWNER devuser;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE testdb TO devuser;"
-
-# 3. Ejecutar el setup automático del repo
-chmod +x setup-cachyos.sh
-./setup-cachyos.sh
+```text
+React → fetch/JSON → FastAPI → Pydantic → SQLAlchemy → PostgreSQL
+                                      ↑
+                                  Alembic
 ```
 
-El script te crea:
-- `backend/.venv` con todo instalado
-- `frontend/node_modules`
-- Corre `alembic upgrade head` y deja la DB lista
-- Te deja 2 terminales listas para correr
+El objetivo principal no es ofrecer una aplicación terminada para producción, sino proporcionar un ejemplo completo, pequeño y modificable para entender cómo se conectan las distintas capas de un sistema web moderno.
 
-Si preferís hacerlo manual, seguí los pasos 2 y 3 abajo.
+## Propósitos del repositorio
 
----
+- Entender cómo un frontend consume una API REST.
+- Aprender la estructura básica de una aplicación FastAPI.
+- Separar rutas, validación, lógica CRUD y persistencia.
+- Ver cómo SQLAlchemy representa tablas como clases Python.
+- Practicar migraciones reproducibles con Alembic.
+- Observar cómo React administra estado y eventos.
+- Tener una base sencilla para experimentar y agregar funcionalidades.
 
-## 2) Backend manual
+La documentación explicativa está en [`docs/GUIA_ESTUDIO.md`](docs/GUIA_ESTUDIO.md), donde se describe qué hace cada archivo del repositorio.
+
+## Stack tecnológico
+
+### Frontend
+
+- React 18
+- Vite
+- JavaScript/JSX
+- `fetch` para comunicación HTTP
+
+### Backend
+
+- Python
+- FastAPI
+- Uvicorn
+- Pydantic
+- SQLAlchemy 2
+- Alembic
+- `psycopg2-binary`
+
+### Base de datos
+
+- PostgreSQL
+
+### Entorno opcional
+
+El script `setup-cachyos.sh` automatiza la preparación en CachyOS/Arch, pero la aplicación no depende de CachyOS y puede ejecutarse en cualquier sistema con Python, Node.js y PostgreSQL instalados.
+
+## Funcionalidad actual
+
+La aplicación permite:
+
+- listar items;
+- crear items con nombre y descripción;
+- marcar items como terminados;
+- eliminar items;
+- comprobar el estado de la API y de la conexión a PostgreSQL;
+- consultar y probar la API desde Swagger.
+
+## Estructura del repositorio
+
+```text
+.
+├── backend/
+│   ├── app/
+│   │   ├── config.py       # Configuración desde el entorno
+│   │   ├── database.py     # Engine, sesiones y Base de SQLAlchemy
+│   │   ├── models.py       # Modelos ORM
+│   │   ├── schemas.py      # Validación de entrada y salida
+│   │   ├── crud.py         # Operaciones de persistencia
+│   │   └── main.py         # Aplicación FastAPI y endpoints
+│   ├── alembic/
+│   │   └── versions/       # Migraciones versionadas
+│   ├── alembic.ini
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx         # Componente principal
+│   │   ├── api.js          # Cliente HTTP
+│   │   ├── main.jsx        # Entrada de React
+│   │   └── App.css         # Estilos
+│   ├── package.json
+│   ├── vite.config.js
+│   └── .env.example
+├── docs/
+│   ├── GUIA_ESTUDIO.md     # Explicación archivo por archivo
+│   └── ARQUITECTURA.md      # Flujo y decisiones técnicas
+├── setup-cachyos.sh
+└── README.md
+```
+
+## Requisitos
+
+- Python 3.11 o superior.
+- Node.js y npm.
+- PostgreSQL en ejecución.
+- Git.
+
+Las versiones exactas de las dependencias Python están en `backend/requirements.txt` y las del frontend en `frontend/package-lock.json`.
+
+## Instalación rápida
+
+### 1. Preparar PostgreSQL
+
+Crea un usuario y una base de datos para el desarrollo. Los valores siguientes coinciden con `backend/.env.example`:
+
+```bash
+sudo -u postgres psql -c "CREATE USER devuser WITH PASSWORD 'devpass' CREATEDB;"
+sudo -u postgres psql -c "CREATE DATABASE testdb OWNER devuser;"
+```
+
+Si el usuario o la base ya existen, estos comandos pueden devolver un aviso; no es necesario recrearlos.
+
+En CachyOS/Arch puede ser necesario inicializar y activar PostgreSQL antes:
+
+```bash
+sudo -u postgres initdb --locale=C.UTF-8 --encoding=UTF8 -D /var/lib/postgres/data
+sudo systemctl enable --now postgresql
+```
+
+### 2. Preparar el backend
 
 ```bash
 cd backend
-
-# venv
 python -m venv .venv
 source .venv/bin/activate
-
-# instalar deps
 pip install --upgrade pip
 pip install -r requirements.txt
-
-# configurar env
 cp .env.example .env
-# edita .env si cambiaste usuario/pass/db
-cat .env
-
-# migrar DB (alembic)
 alembic upgrade head
+```
 
-# correr API
+Inicia la API:
+
+```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-API en: http://localhost:8000  
-Docs Swagger: http://localhost:8000/docs  
-Health: http://localhost:8000/health
+### 3. Preparar el frontend
 
-### Endpoints de prueba
-- `GET /api/items` - lista items
-- `POST /api/items` - crea item `{ "name": "Mi item", "description": "opcional" }`
-- `GET /api/items/{id}`
-- `PUT /api/items/{id}`
-- `DELETE /api/items/{id}`
-
----
-
-## 3) Frontend manual
+En otra terminal:
 
 ```bash
 cd frontend
@@ -97,179 +153,106 @@ cp .env.example .env
 npm run dev
 ```
 
-Frontend en: http://localhost:5173 (proxy a backend en 8000)
+La aplicación estará disponible en <http://localhost:5173>.
 
----
+### Instalación automatizada en CachyOS/Arch
 
-## 4) Alembic - flujo de trabajo
+Si estás usando CachyOS o una distribución basada en Arch, puedes ejecutar:
+
+```bash
+chmod +x setup-cachyos.sh
+./setup-cachyos.sh
+```
+
+El script comprueba dependencias, prepara PostgreSQL, crea la base de datos, instala Python y npm, y ejecuta la migración inicial.
+
+## URLs útiles
+
+Con el backend y frontend activos:
+
+- Aplicación: <http://localhost:5173>
+- API: <http://localhost:8000>
+- Swagger/OpenAPI: <http://localhost:8000/docs>
+- ReDoc: <http://localhost:8000/redoc>
+- Health check: <http://localhost:8000/health>
+
+## Endpoints
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| `GET` | `/` | Información básica de la API |
+| `GET` | `/health` | Comprueba la API y PostgreSQL |
+| `GET` | `/api/items` | Lista items; admite `skip` y `limit` |
+| `POST` | `/api/items` | Crea un item |
+| `GET` | `/api/items/{id}` | Obtiene un item por id |
+| `PUT` | `/api/items/{id}` | Actualiza un item |
+| `DELETE` | `/api/items/{id}` | Elimina un item |
+
+Ejemplo:
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/api/items
+curl -X POST http://localhost:8000/api/items \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Leer la documentación","description":"Entender el flujo completo"}'
+```
+
+## Migraciones con Alembic
+
+Las migraciones representan la evolución del esquema de PostgreSQL. Para crear una migración después de modificar `backend/app/models.py`:
 
 ```bash
 cd backend
 source .venv/bin/activate
-
-# 1. Cambias app/models.py (ej: agregas una columna)
-# 2. Generas migración
-alembic revision --autogenerate -m "add nueva columna"
-
-# 3. Revisas backend/alembic/versions/xxxx.py
-# 4. Aplicas
+alembic revision --autogenerate -m "describir el cambio"
+# Revisar siempre el archivo generado
 alembic upgrade head
-
-# downgrade si necesitas
-alembic downgrade -1
-alembic history
-alembic current
 ```
 
----
-
-## 5) PyCharm — cómo abrir este repo
-
-### Opción A: PyCharm Professional (recomendada)
-1. `File > Open` -> selecciona la carpeta `cachyos-stack-demo`
-2. PyCharm detectará `backend` y `frontend` como módulos separados. Configura:
-
-**Para el Backend:**
-1. `File > Settings > Project > Python Interpreter`
-2. `Add Interpreter > Add Local Interpreter > Virtualenv`
-3. Selecciona `Existing` y apunta a `backend/.venv/bin/python`
-4. Marca `backend` como `Sources Root`: click derecho sobre `backend` > `Mark Directory as > Sources Root`
-5. `Run > Edit Configurations > + > FastAPI`
-   - Module: `app.main`
-   - App: `app`
-   - Working directory: `/ruta/a/cachyos-stack-demo/backend`
-   - Env var: `DATABASE_URL=postgresql://devuser:devpass@localhost:5432/testdb`
-
-**Config alternativa (Uvicorn run config):**
-- `+ > Python`
-- Script path: `backend/.venv/bin/uvicorn`
-- Parameters: `app.main:app --reload --port 8000`
-- Working directory: `backend`
-
-**Para Alembic en PyCharm:**
-- Abre la terminal integrada (Alt+F12) ya con el venv activado y corre `alembic revision --autogenerate -m "..."`
-
-**Database Tool Window (solo Pro):**
-1. `View > Tool Windows > Database`
-2. `+ > Data Source > PostgreSQL`
-3. Host: `localhost`, Port: `5432`, DB: `testdb`, User: `devuser`, Pass: `devpass`
-4. `Test Connection` -> OK. Vas a ver tus tablas `items` y `alembic_version`
-
-### Opción B: PyCharm Community
-Mismo flujo pero sin Database Tool Window. Usa `psql` o DBeaver para ver la DB:
-```bash
-psql -U devuser -h localhost -d testdb
-\dt
-SELECT * FROM items;
-```
-
-### Estructura para PyCharm
-Abre el proyecto raíz. PyCharm te va a pedir 2 interpreters si abres backend y frontend. Lo normal es:
-- Abrir `backend` como proyecto Python principal
-- Arrastrar `frontend` y PyCharm lo detecta como proyecto JS (si tienes Node plugin)
-
-O abre todo como un proyecto y configura:
-- `Settings > Project Structure > Add Content Root` -> añade `backend` y `frontend` por separado
-
----
-
-## 6) Troubleshooting CachyOS/Arch
-
-**PostgreSQL no arranca:**
-```bash
-sudo systemctl status postgresql -l
-sudo journalctl -u postgresql -n 50 --no-pager
-# si cambiaste config
-sudo -u postgres initdb --locale=C.UTF-8 --encoding=UTF8 -D '/var/lib/postgres/data' --overwrite
-```
-
-**Error `peer authentication failed` o `password authentication failed`:**
-Edita `/var/lib/postgres/data/pg_hba.conf` y cambia:
-```
-local   all             all                                     peer
-```
-por:
-```
-local   all             all                                     md5
-```
-Luego `sudo systemctl restart postgresql`
-
-**Puerto 5432 ocupado:**
-```bash
-sudo ss -tulpn | grep 5432
-```
-
-**Python 3.14 y psycopg2:**
-`psycopg2-binary` ya compila bien en 3.14. Si falla, alternativa: `pip install psycopg[binary]`
-
-**Node npm permission errors:**
-No uses sudo para npm. Si falla: `rm -rf frontend/node_modules package-lock.json && npm install`
-
----
-
-## 7) Estructura del repo
-
-```
-cachyos-stack-demo/
-├── setup-cachyos.sh          # Script automatizado para CachyOS
-├── backend/
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py           # FastAPI app + CORS + CRUD
-│   │   ├── models.py         # SQLAlchemy models (tabla items)
-│   │   ├── schemas.py        # Pydantic schemas
-│   │   ├── crud.py           # queries
-│   │   ├── database.py       # engine, SessionLocal, Base
-│   │   └── config.py         # settings desde .env
-│   ├── alembic/
-│   │   ├── env.py
-│   │   └── versions/         # migraciones autogeneradas
-│   ├── alembic.ini
-│   ├── requirements.txt
-│   └── .env.example
-└── frontend/
-    ├── src/
-    │   ├── App.jsx           # UI que consume la API
-    │   ├── api.js            # fetch helpers
-    │   └── main.jsx
-    ├── package.json
-    ├── vite.config.js
-    └── index.html
-```
-
----
-
-## 8) Documentación y estudio
-
-- [`docs/GUIA_ESTUDIO.md`](docs/GUIA_ESTUDIO.md): recorrido pedagógico por módulos, prácticas, preguntas y proyecto final.
-- [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): referencia técnica de la estructura y el flujo de datos.
-
-La guía técnica explica la estructura de carpetas, las responsabilidades de cada módulo, el flujo React → FastAPI → SQLAlchemy → PostgreSQL, los endpoints y cómo extender el ejemplo.
-
-También se añadieron docstrings en los módulos Python para que el código sea navegable desde PyCharm y herramientas de documentación.
-
-La guía técnica [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) explica la estructura de carpetas, las responsabilidades de cada módulo, el flujo React → FastAPI → SQLAlchemy → PostgreSQL, los endpoints y cómo extender el ejemplo.
-
-También se añadieron docstrings en los módulos Python para que el código sea navegable desde PyCharm y herramientas de documentación.
-
-## 8) Comandos útiles
+Comandos útiles:
 
 ```bash
-# Ver logs de postgres
-sudo journalctl -u postgresql -f
-
-# Conectarte a la DB
-psql -U devuser -h localhost -d testdb
-# o
-sudo -u postgres psql -d testdb
-
-# Resetear DB desde cero
-alembic downgrade base && alembic upgrade head
-# o drop y crea
-sudo -u postgres psql -c "DROP DATABASE testdb; CREATE DATABASE testdb OWNER devuser;" && alembic upgrade head
-
-# Tests rápidos de API
-curl http://localhost:8000/health
-curl http://localhost:8000/api/items
-curl -X POST http://localhost:8000/api/items -H "Content-Type: application/json" -d '{"name":"Test","description":"hola"}'
+alembic current      # revisión aplicada actualmente
+alembic history      # historial de migraciones
+alembic downgrade -1 # retrocede una migración
 ```
+
+No edites una migración que ya fue aplicada en otro entorno. Crea una nueva para representar cada cambio posterior.
+
+## Configuración
+
+### Backend
+
+Copia `backend/.env.example` como `backend/.env` y ajusta:
+
+- `DATABASE_URL`: URL de conexión a PostgreSQL.
+- `APP_ENV`: entorno actual.
+- `SECRET_KEY`: secreto de la aplicación; debe cambiarse fuera del entorno local.
+- `CORS_ORIGINS`: orígenes permitidos para el frontend.
+
+### Frontend
+
+`frontend/.env.example` contiene `VITE_API_URL`. Si no se define, el cliente usa `http://localhost:8000`. Durante el desarrollo, Vite también tiene un proxy para `/api` y `/health`.
+
+Los archivos `.env` no deben subirse al repositorio.
+
+## Documentación del código
+
+- [`docs/GUIA_ESTUDIO.md`](docs/GUIA_ESTUDIO.md): explica qué hace cada archivo y cómo se conectan las capas.
+- [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): referencia técnica de la estructura, el flujo de datos y la extensión del proyecto.
+- [`backend/README_BACKEND.md`](backend/README_BACKEND.md): instrucciones y organización del backend.
+
+## Ideas para ampliar el demo
+
+- Añadir prioridad o fecha de vencimiento a los items.
+- Incorporar búsqueda y filtros.
+- Añadir paginación más completa.
+- Crear usuarios y autenticación.
+- Agregar tests para la API y el frontend.
+- Separar el frontend en componentes más pequeños.
+- Añadir Docker o una configuración para despliegue.
+
+## Estado del proyecto
+
+Este repositorio es un demo educativo y de experimentación. La configuración incluida está pensada para desarrollo local, no para producción. Antes de desplegarlo habría que revisar autenticación, secretos, validación de entrada, logging, manejo de errores, CORS, migraciones y observabilidad.
