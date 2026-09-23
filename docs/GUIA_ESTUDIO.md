@@ -1,185 +1,173 @@
-# Guía de estudio: React + FastAPI + PostgreSQL
+# Guía de estudio del código
 
-Esta guía convierte el repositorio en un laboratorio de aprendizaje. La idea no es solo levantar la aplicación, sino entender qué problema resuelve cada capa y poder modificarla sin hacerlo a ciegas.
+Este documento explica qué hace cada parte importante del repositorio y cómo se relacionan entre sí. No es una guía de ejercicios: sirve como referencia para leer el proyecto y entender la responsabilidad de cada archivo.
 
-## 0. Objetivo del proyecto
+## 1. Visión general
 
-La aplicación es una lista de items. Permite crear un item, marcarlo como terminado, eliminarlo y consultar el estado de la API y PostgreSQL.
-
-Aunque el dominio es pequeño, el recorrido contiene piezas que aparecen en aplicaciones reales:
+El proyecto implementa una aplicación sencilla de items usando varias capas:
 
 ```text
-Interfaz React
-    ↓ fetch / JSON / HTTP
-API FastAPI
-    ↓ schemas / dependencias
-Capa CRUD
-    ↓ ORM / sesiones / transacciones
-SQLAlchemy
-    ↓ driver psycopg2
-PostgreSQL
+Navegador
+  └── React: muestra la interfaz y captura eventos
+        └── api.js: envía peticiones HTTP y recibe JSON
+              └── FastAPI: valida peticiones y ejecuta endpoints
+                    └── CRUD: expresa operaciones de negocio sobre Item
+                          └── SQLAlchemy: traduce objetos Python a SQL
+                                └── PostgreSQL: almacena los datos
 
-Alembic mantiene la evolución del esquema de PostgreSQL.
+Alembic mantiene sincronizado el esquema de PostgreSQL con los modelos.
 ```
 
-## 1. Método de estudio
+Cada capa tiene una responsabilidad concreta. Por ejemplo, React no construye consultas SQL y PostgreSQL no conoce los componentes de React. La API funciona como frontera entre el navegador y la base de datos.
 
-No conviene leer todos los archivos de principio a fin. Sigue primero una petición completa y después estudia cada capa:
+## 2. Estructura del repositorio
 
-1. Abre `frontend/src/App.jsx` y localiza `handleCreate`.
-2. Sigue la llamada a `createItem` en `frontend/src/api.js`.
-3. Busca `POST /api/items` en `backend/app/main.py`.
-4. Observa cómo FastAPI recibe `ItemCreate` y `get_db`.
-5. Sigue la llamada a `crud.create_item`.
-6. Comprueba cómo se crea `models.Item` y se hace `commit()`.
-7. Mira `backend/app/models.py` para relacionar atributos Python con columnas SQL.
-8. Revisa `schemas.py` para entender qué entra y qué sale de la API.
-9. Confirma el resultado en PostgreSQL con `psql`.
-
-Después repite el recorrido con el checkbox, que usa `PUT`, y con el botón Eliminar, que usa `DELETE`.
-
-## 2. Preparar el laboratorio
-
-### Arranque manual
-
-Terminal 1, backend:
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-alembic upgrade head
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```text
+cachyos-stack-demo/
+├── README.md                 # Instalación, comandos y solución de problemas
+├── setup-cachyos.sh          # Preparación automática en CachyOS/Arch
+├── docs/
+│   ├── ARQUITECTURA.md       # Referencia técnica de la aplicación
+│   └── GUIA_ESTUDIO.md       # Explicación general del código
+├── backend/
+│   ├── app/
+│   │   ├── config.py         # Configuración
+│   │   ├── database.py       # Conexión y sesiones de DB
+│   │   ├── models.py         # Modelos ORM
+│   │   ├── schemas.py        # Validación de datos con Pydantic
+│   │   ├── crud.py            # Operaciones de persistencia
+│   │   └── main.py            # Aplicación y rutas FastAPI
+│   ├── alembic/
+│   │   └── versions/         # Historial de cambios de la base
+│   ├── alembic.ini           # Configuración de Alembic
+│   ├── requirements.txt      # Dependencias Python
+│   └── .env.example          # Plantilla de configuración
+└── frontend/
+    ├── src/
+    │   ├── main.jsx          # Arranque de React
+    │   ├── App.jsx           # Componente principal
+    │   ├── api.js            # Funciones HTTP
+    │   └── App.css           # Estilos
+    ├── vite.config.js        # Servidor de desarrollo y proxy
+    ├── package.json          # Dependencias y scripts npm
+    └── index.html            # Documento HTML inicial
 ```
 
-Terminal 2, frontend:
+## 3. Backend: configuración
 
-```bash
-cd frontend
-npm install
-cp .env.example .env
-npm run dev
-```
+### `backend/app/config.py`
 
-URLs útiles:
-
-- Aplicación: `http://localhost:5173`
-- Swagger: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`
-- PostgreSQL: `localhost:5432`, base `testdb`
-
-Si aún no existe PostgreSQL, sigue la sección de instalación del `README.md`. `setup-cachyos.sh` automatiza buena parte de estos pasos en CachyOS/Arch.
-
-## 3. Módulo 1 — HTTP y JSON
-
-### Conceptos
-
-- **Método HTTP:** describe la intención (`GET`, `POST`, `PUT`, `DELETE`).
-- **Ruta:** identifica el recurso (`/api/items` o `/api/items/3`).
-- **Body:** JSON enviado, principalmente en `POST` y `PUT`.
-- **Status code:** comunica el resultado (`200`, `201`, `404`).
-- **Headers:** metadatos como `Content-Type: application/json`.
-
-### Práctica
-
-```bash
-curl http://localhost:8000/
-curl http://localhost:8000/health
-curl http://localhost:8000/api/items
-
-curl -X POST http://localhost:8000/api/items \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"Estudiar HTTP","description":"Leer métodos y códigos"}'
-
-curl -X PUT http://localhost:8000/api/items/1 \
-  -H 'Content-Type: application/json' \
-  -d '{"is_done":true}'
-
-curl -i http://localhost:8000/api/items/999999
-curl -X DELETE http://localhost:8000/api/items/1
-```
-
-### Preguntas
-
-1. ¿Por qué crear devuelve `201` y no `200`?
-2. ¿Qué diferencia hay entre `/api/items` y `/api/items/1`?
-3. ¿Qué respuesta debería devolver la API si falta `name`?
-4. ¿Qué hace `Content-Type`?
-
-## 4. Módulo 2 — FastAPI y validación
-
-### Archivos para leer
-
-- `backend/app/main.py`
-- `backend/app/schemas.py`
-
-En este endpoint, las anotaciones de tipos tienen un efecto práctico:
+Este archivo centraliza los valores que pueden variar entre entornos:
 
 ```python
-@app.post("/api/items", response_model=schemas.ItemOut, status_code=201)
-def create_item(item: schemas.ItemCreate, db: Session = Depends(get_db)):
-    return crud.create_item(db, item)
+class Settings(BaseSettings):
+    DATABASE_URL: str = "postgresql://devuser:devpass@localhost:5432/testdb"
+    APP_ENV: str = "development"
+    SECRET_KEY: str = "dev-secret-change-me"
+    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
 ```
 
-FastAPI valida el JSON con `ItemCreate`, obtiene una sesión mediante `Depends(get_db)`, ejecuta la operación y serializa el resultado como `ItemOut`.
+`BaseSettings` permite obtener esos valores desde variables de entorno o desde `backend/.env`. Los valores escritos en la clase funcionan como valores por defecto para el desarrollo.
 
-### Ejercicios
+`cors_origins_list` transforma la cadena de orígenes separados por comas en una lista. FastAPI necesita esa lista para decidir qué aplicaciones web pueden hacer peticiones al backend.
 
-1. Cambia `name: str` para exigir una longitud mínima usando `Field`.
-2. Añade un endpoint `GET /api/items/count` que devuelva la cantidad total.
-3. Cambia el mensaje de 404 y observa la respuesta en Swagger.
-4. Envía un JSON sin `name` y otro con `is_done: "sí"`. Observa los errores de validación.
-5. Explica por qué `ItemCreate` y `ItemOut` no son el mismo esquema.
+`get_settings()` está decorada con `@lru_cache`. Eso hace que la configuración se cree una sola vez y se reutilice durante la vida del proceso. La variable `settings` es la instancia que utilizan los demás módulos.
 
-## 5. Módulo 3 — SQL y PostgreSQL
+El archivo `.env` no debe subirse a Git porque normalmente contiene URLs, contraseñas o secretos. `.env.example` solo documenta el formato esperado.
 
-Conéctate a la base:
+## 4. Backend: conexión a PostgreSQL
 
-```bash
-psql -U devuser -h localhost -d testdb
+### `backend/app/database.py`
+
+Este módulo prepara SQLAlchemy:
+
+- `engine` contiene la configuración de conexión con PostgreSQL y administra un pool de conexiones.
+- `pool_pre_ping=True` comprueba que una conexión reutilizada siga viva.
+- `SessionLocal` es una fábrica de sesiones.
+- `Base` es la clase base para los modelos ORM.
+- `get_db()` crea una sesión, la entrega al endpoint y la cierra siempre al terminar.
+
+La función `get_db()` usa `yield` porque FastAPI la trata como una dependencia con ciclo de vida:
+
+```python
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 ```
 
-Consultas para explorar:
+Todo lo que ocurre antes de `yield` prepara el recurso. Lo que ocurre en `finally` libera el recurso incluso si el endpoint produce un error. Así no quedan sesiones abiertas innecesariamente.
 
-```sql
-\\dt
-\\d items
-SELECT * FROM items;
-SELECT id, name, is_done FROM items ORDER BY id DESC;
-SELECT COUNT(*) FROM items;
-SELECT * FROM alembic_version;
+## 5. Backend: modelo de datos
+
+### `backend/app/models.py`
+
+`Item` es un modelo ORM. Representa una fila de la tabla `items` y describe cómo se mapea cada atributo de Python a una columna de PostgreSQL:
+
+```python
+class Item(Base):
+    __tablename__ = "items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    is_done = Column(Boolean, default=False, nullable=False)
 ```
 
-Relaciona estas partes:
+- `__tablename__` indica el nombre de la tabla.
+- `id` es la clave primaria y se genera para identificar cada fila.
+- `name` es obligatorio y tiene como máximo 200 caracteres.
+- `description` es opcional y usa texto sin una longitud corta fija.
+- `is_done` indica si el item está terminado.
+- `created_at` y `updated_at` registran fechas generadas por PostgreSQL.
+- `index=True` solicita un índice útil para búsquedas y ordenamientos.
 
-| Python | PostgreSQL |
-|---|---|
-| `Item.id` | `items.id` |
-| `String(200)` | `varchar(200)` |
-| `Text` | `text` |
-| `Boolean` | `boolean` |
-| `DateTime(timezone=True)` | timestamp con zona horaria |
+`__repr__` define una representación legible para depuración, por ejemplo `<Item id=3 name='Leer SQL'>`.
 
-### Preguntas
+El modelo es una representación interna de la base de datos. No es exactamente lo mismo que el JSON que la API acepta o devuelve.
 
-1. ¿Por qué `id` es clave primaria?
-2. ¿Qué diferencia hay entre `nullable=False` y un valor por defecto?
-3. ¿Para qué sirven los índices de `id` y `name`?
-4. ¿Qué información guarda `alembic_version`?
+## 6. Backend: esquemas de entrada y salida
 
-## 6. Módulo 4 — SQLAlchemy, sesiones y CRUD
+### `backend/app/schemas.py`
 
-### Archivos para leer
+Los esquemas Pydantic son contratos de la API. Validan los datos que entran y controlan los datos que salen.
 
-- `backend/app/database.py`
-- `backend/app/models.py`
-- `backend/app/crud.py`
+- `ItemBase` contiene los campos comunes.
+- `ItemCreate` representa el cuerpo esperado al crear.
+- `ItemUpdate` permite actualizaciones parciales: todos sus campos son opcionales.
+- `ItemOut` representa un item completo en una respuesta, incluyendo `id` y fechas.
 
-`engine` representa la configuración de conexión. `SessionLocal` crea sesiones. `get_db()` entrega una sesión a cada request y la cierra en `finally`.
+La separación entre `models.py` y `schemas.py` es importante:
 
-Una creación sigue este ciclo:
+- El modelo ORM está diseñado para persistir en PostgreSQL.
+- El schema está diseñado para validar y serializar HTTP.
+- Los clientes no deberían depender de todos los detalles internos de la base.
+
+En `ItemOut`, `from_attributes = True` permite crear el schema a partir de un objeto SQLAlchemy y no solo a partir de un diccionario.
+
+## 7. Backend: operaciones CRUD
+
+### `backend/app/crud.py`
+
+CRUD significa Create, Read, Update y Delete. Este módulo contiene las operaciones que consultan o modifican la base de datos, separadas de las rutas HTTP.
+
+### `get_items`
+
+```python
+return db.query(models.Item) \\
+    .order_by(models.Item.id.desc()) \\
+    .offset(skip).limit(limit).all()
+```
+
+Construye una consulta de SQLAlchemy para obtener items, ordenarlos del más nuevo al más antiguo, saltar `skip` filas, limitar el resultado y ejecutarlo con `all()`.
+
+### `get_item`
+
+Busca una fila cuyo `id` coincida con el parámetro. `first()` devuelve el objeto encontrado o `None`.
+
+### `create_item`
 
 ```python
 db_item = models.Item(**item.model_dump())
@@ -188,149 +176,205 @@ db.commit()
 db.refresh(db_item)
 ```
 
-- `model_dump()` convierte el esquema Pydantic en un diccionario.
-- `add()` registra el objeto en la sesión.
-- `commit()` confirma la transacción en PostgreSQL.
-- `refresh()` vuelve a leer el objeto para obtener `id` y fechas generadas por el servidor.
+Primero convierte el schema Pydantic en un diccionario. Después crea un modelo ORM, lo agrega a la sesión, confirma la transacción y vuelve a cargar el objeto para obtener los valores generados por la base, como `id` y `created_at`.
 
-### Ejercicios
+### `update_item`
 
-1. Cambia el orden de `created_at` en `get_items` y observa la pantalla.
-2. Añade una función CRUD que busque por nombre.
-3. Provoca un error antes de `commit` y explica qué pasa con la sesión.
-4. Activa `echo=True` en `database.py` y observa el SQL generado.
-5. Explica por qué `update_item` usa `exclude_unset=True`.
+Busca el objeto y usa `model_dump(exclude_unset=True)`. Esta opción es importante: solo se modifican los campos que el cliente envió. Luego `setattr` asigna cada valor, `commit()` guarda el cambio y `refresh()` actualiza el objeto.
 
-## 7. Módulo 5 — Alembic y evolución del esquema
+### `delete_item`
 
-El modelo Python no modifica automáticamente una base existente. Alembic registra esos cambios como migraciones reproducibles.
+Busca el objeto, lo marca para eliminación con `db.delete()`, confirma la transacción y devuelve el objeto eliminado. Si no existe, devuelve `None`.
 
-### Laboratorio: añadir prioridad
+El módulo CRUD no decide códigos HTTP. Si no encuentra un registro, retorna `None`; `main.py` decide convertir eso en una respuesta `404`.
 
-1. En `backend/app/models.py`, añade:
+## 8. Backend: aplicación y endpoints
 
-   ```python
-   priority = Column(Integer, default=0, nullable=False)
-   ```
+### `backend/app/main.py`
 
-2. Añade `priority` a `ItemBase` y `ItemUpdate` en `schemas.py`.
-3. Genera la migración:
+Este es el punto de entrada de FastAPI. Crea la instancia:
 
-   ```bash
-   cd backend
-   alembic revision --autogenerate -m "add item priority"
-   ```
+```python
+app = FastAPI(
+    title="CachyOS Stack Demo API",
+    description="React + FastAPI + PostgreSQL + SQLAlchemy + Alembic",
+    version="0.1.0",
+)
+```
 
-4. Revisa el archivo generado: nunca aceptes una migración automática sin inspeccionarla.
-5. Aplica el cambio:
+A partir de esa instancia se registran las rutas y el middleware CORS.
 
-   ```bash
-   alembic upgrade head
-   alembic current
-   ```
+### CORS
 
-6. Comprueba la columna con `psql` y luego expón el campo en React.
-7. Practica volver atrás en un entorno de prueba:
+`CORSMiddleware` permite que el frontend, que se ejecuta normalmente en el puerto 5173, llame al backend en el puerto 8000. La lista de orígenes permitidos procede de `settings.cors_origins_list`.
 
-   ```bash
-   alembic downgrade -1
-   alembic upgrade head
-   ```
+### Ruta raíz: `GET /`
 
-### Preguntas
+Devuelve un pequeño índice con enlaces a documentación, health check y items. Sirve para comprobar rápidamente que la aplicación responde.
 
-1. ¿Qué diferencia hay entre cambiar `models.py` y crear una migración?
-2. ¿Por qué no conviene editar una migración que ya fue aplicada?
-3. ¿Qué significa `head`?
-4. ¿Qué riesgos aparecen al añadir una columna `NOT NULL` a una tabla con datos?
+### Health check: `GET /health`
 
-## 8. Módulo 6 — React y estado
+Recibe una sesión mediante `Depends(get_db)` y ejecuta `SELECT 1`. La respuesta distingue entre el proceso de la API y la conexión a la base de datos:
 
-### Archivos para leer
+```json
+{"status":"ok","database":"ok"}
+```
 
-- `frontend/src/main.jsx`
-- `frontend/src/App.jsx`
-- `frontend/src/api.js`
-- `frontend/src/App.css`
+### Listado: `GET /api/items`
 
-`App` conserva el estado de la pantalla con `useState`. `useEffect` ejecuta `load()` al montar el componente. Después de cada mutación se vuelve a pedir la lista al backend, por lo que la fuente de verdad sigue siendo PostgreSQL.
+FastAPI obtiene `skip`, `limit` y una sesión. El endpoint llama a `crud.get_items`. `response_model=list[schemas.ItemOut]` indica que la respuesta es una lista de objetos con la forma de `ItemOut`.
 
-### Ejercicios
+### Creación: `POST /api/items`
 
-1. Añade un filtro para mostrar todos, pendientes o terminados.
-2. Deshabilita botones mientras se ejecuta una petición.
-3. Añade un formulario para editar el nombre.
-4. Muestra un mensaje diferente para error de red y error HTTP.
-5. Reemplaza `confirm()` por un diálogo React.
-6. Extrae la lista a un componente `ItemList` y el formulario a `ItemForm`.
+El parámetro `item: schemas.ItemCreate` hace que FastAPI lea y valide el JSON del body. Si es válido, se delega en CRUD y se devuelve el nuevo registro con status `201`.
 
-### Preguntas
+### Lectura individual: `GET /api/items/{item_id}`
 
-1. ¿Por qué React necesita `key={item.id}` al usar `map`?
-2. ¿Qué diferencia hay entre el estado `loading` y `error`?
-3. ¿Qué ocurre si se elimina un item sin volver a ejecutar `load()`?
-4. ¿Qué ventaja aporta separar `api.js` de `App.jsx`?
+FastAPI convierte el segmento de URL a entero, busca el registro y lanza `HTTPException(status_code=404)` si no existe.
 
-## 9. Módulo 7 — CORS, proxy y configuración
+### Actualización: `PUT /api/items/{item_id}`
 
-El navegador aplica la política de mismo origen. FastAPI permite los orígenes definidos en `CORS_ORIGINS`. Durante el desarrollo, Vite además reenvía `/api` y `/health` al puerto 8000.
+Recibe un `ItemUpdate`. Aunque la ruta usa `PUT`, la implementación acepta campos parciales porque todos los campos del schema son opcionales.
 
-Investiga estas piezas:
+### Eliminación: `DELETE /api/items/{item_id}`
 
-- `backend/.env.example`
-- `backend/app/config.py`
-- `frontend/.env.example`
-- `frontend/vite.config.js`
+Elimina el registro y devuelve un JSON pequeño con `deleted` e `id`. Si no existe, responde con `404`.
 
-### Experimentos
+FastAPI genera automáticamente la documentación OpenAPI en `/docs` y `/redoc` a partir de rutas, tipos, schemas y códigos de respuesta.
 
-1. Cambia `CORS_ORIGINS` a un valor incorrecto y observa la petición desde el navegador.
-2. Cambia `VITE_API_URL` y comprueba qué URL usa `api.js`.
-3. Mira la pestaña Network de las herramientas del navegador.
-4. Compara una petición directa al puerto 8000 con una petición enviada mediante el proxy de Vite.
+## 9. Migraciones con Alembic
 
-## 10. Proyecto final sugerido
+### `backend/alembic/env.py`
 
-Convierte la lista en una pequeña aplicación de tareas:
+Alembic necesita conocer dos cosas:
 
-- `priority` con valores 1 a 5;
-- fecha límite;
-- filtro por estado;
-- búsqueda por nombre;
-- endpoint de paginación real;
-- validaciones de entrada;
-- pruebas del CRUD;
-- migración Alembic;
-- mensajes de error accesibles en React.
+1. cómo conectarse a la base de datos;
+2. qué metadatos representan el esquema actual.
 
-Orden recomendado:
+`env.py` importa `Base` y los modelos para que `Base.metadata` conozca la tabla `items`. También lee `DATABASE_URL` y configura la ejecución online u offline.
 
-1. Modelo y migración.
-2. Schemas de entrada y salida.
-3. Funciones CRUD.
-4. Endpoints y documentación OpenAPI.
-5. Cliente HTTP.
-6. Estado y componentes React.
-7. Pruebas y manejo de errores.
+### `backend/alembic/versions/001_create_items.py`
 
-## 11. Checklist de comprensión
+Esta migración contiene dos funciones:
 
-Antes de dar el proyecto por entendido, deberías poder explicar sin mirar la respuesta:
+- `upgrade()` crea la tabla y sus índices;
+- `downgrade()` elimina los índices y la tabla.
 
-- qué diferencia hay entre modelo ORM y schema Pydantic;
-- por qué se crea una sesión por request;
-- qué hacen `commit` y `refresh`;
-- cómo un endpoint termina ejecutando una consulta SQL;
-- por qué Alembic es necesario aunque exista `models.py`;
-- cómo llega un click de React hasta PostgreSQL;
-- cómo se representa un error 404 y un error de validación;
-- qué configuración debe permanecer fuera de Git;
-- qué función cumple el proxy de Vite;
-- cómo agregar una entidad nueva siguiendo la arquitectura existente.
+Alembic guarda la revisión aplicada en `alembic_version`. Por eso puede saber qué migraciones faltan y ejecutar solo las necesarias.
 
-## 12. Recursos dentro del repositorio
+El modelo actual y las migraciones cumplen funciones distintas:
 
-- [README principal](../README.md): instalación, CachyOS y comandos rápidos.
-- [Guía de arquitectura](ARQUITECTURA.md): referencia técnica de cada módulo.
-- [README del backend](../backend/README_BACKEND.md): ejecución y capas del backend.
-- Swagger: `http://localhost:8000/docs` cuando el backend está encendido.
+- `models.py` describe cómo debe verse el modelo en el código actual.
+- Las migraciones describen la historia de cambios necesaria para llevar una base desde una versión anterior hasta la actual.
+
+## 10. Frontend: entrada de React
+
+### `frontend/index.html`
+
+Contiene el elemento vacío `<div id="root"></div>`. React usa ese elemento como punto donde montar la aplicación.
+
+### `frontend/src/main.jsx`
+
+`ReactDOM.createRoot` conecta React con `#root` y renderiza `<App />`. `React.StrictMode` ayuda a detectar problemas durante el desarrollo, aunque no cambia la funcionalidad que verá el usuario en producción.
+
+## 11. Frontend: cliente HTTP
+
+### `frontend/src/api.js`
+
+Este módulo concentra todas las llamadas al backend. `API` toma `VITE_API_URL` del entorno y, si no existe, usa `http://localhost:8000`.
+
+Cada función sigue el mismo patrón:
+
+1. construye la URL;
+2. ejecuta `fetch` con el método y body necesarios;
+3. comprueba `res.ok`;
+4. lanza un error si HTTP devuelve un status no exitoso;
+5. convierte la respuesta con `res.json()`.
+
+Las funciones son:
+
+- `fetchItems()`: `GET /api/items`;
+- `createItem(data)`: `POST /api/items`;
+- `updateItem(id, data)`: `PUT /api/items/{id}`;
+- `deleteItem(id)`: `DELETE /api/items/{id}`;
+- `checkHealth()`: `GET /health`.
+
+Separar estas funciones de `App.jsx` evita mezclar lógica visual con detalles de HTTP.
+
+## 12. Frontend: componente principal
+
+### `frontend/src/App.jsx`
+
+`App` mantiene el estado de la interfaz con `useState`:
+
+- `items`: datos mostrados en la lista;
+- `name` y `description`: valores controlados del formulario;
+- `health`: resultado del health check;
+- `loading`: indica que se está cargando la lista;
+- `error`: mensaje que se muestra cuando falla una petición.
+
+`load()` obtiene los items y después consulta la salud del backend. `useEffect(() => { load() }, [])` llama a `load` cuando el componente se monta.
+
+`handleCreate` evita el submit HTML tradicional, valida que el nombre no esté vacío, llama a `createItem`, limpia el formulario y vuelve a cargar los datos.
+
+`toggleDone` invierte `is_done` y llama a `updateItem`.
+
+`handleDelete` pide confirmación al usuario, llama a `deleteItem` y recarga la lista.
+
+El JSX final representa tres zonas principales:
+
+1. encabezado con tecnologías y estado;
+2. formulario para crear items;
+3. lista de items y acciones;
+4. tarjeta con comandos y explicación de Alembic.
+
+La expresión `items.map(...)` crea un elemento visual por cada item. `key={item.id}` permite que React identifique cada elemento de forma estable.
+
+## 13. Frontend: estilos y servidor Vite
+
+### `frontend/src/App.css`
+
+Contiene todos los estilos de la interfaz: colores, tarjetas, botones, formulario, lista, estados terminados y mensajes de error. No contiene lógica ni comunicación con la API.
+
+### `frontend/vite.config.js`
+
+Configura Vite para:
+
+- usar el plugin de React;
+- escuchar en `0.0.0.0:5173`;
+- aceptar el host del entorno de desarrollo;
+- reenviar `/api` y `/health` a `http://localhost:8000`.
+
+El proxy permite que el navegador acceda al frontend y que Vite reenvíe ciertas rutas al backend durante el desarrollo.
+
+## 14. Recorrido completo de una creación
+
+Cuando el usuario crea un item ocurre lo siguiente:
+
+1. Escribe en los inputs; React actualiza `name` y `description`.
+2. Envía el formulario; `handleCreate` intercepta el evento.
+3. `api.js` envía un `POST` con JSON.
+4. FastAPI encuentra la ruta `/api/items`.
+5. Pydantic valida el JSON como `ItemCreate`.
+6. `Depends(get_db)` proporciona una sesión SQLAlchemy.
+7. `crud.create_item` crea el objeto ORM.
+8. SQLAlchemy ejecuta el `INSERT` al hacer `commit()`.
+9. PostgreSQL genera el id y las fechas.
+10. `refresh()` trae esos valores al objeto Python.
+11. FastAPI serializa el resultado como `ItemOut`.
+12. React vuelve a llamar a `load()` y muestra el registro persistido.
+
+## 15. Responsabilidad de cada capa
+
+| Capa | Se ocupa de | No debería ocuparse de |
+|---|---|---|
+| React | Interfaz, estado y eventos | SQL o credenciales de DB |
+| `api.js` | URLs, HTTP y JSON | Renderizar componentes |
+| FastAPI | Rutas, validación HTTP y status codes | Construir la interfaz |
+| Schemas | Forma y validación de datos | Ejecutar consultas |
+| CRUD | Consultas y transacciones | Decidir cómo se muestra un error |
+| SQLAlchemy | Mapear objetos a SQL | Saber detalles de React |
+| PostgreSQL | Persistir y consultar datos | Validar la interfaz |
+| Alembic | Versionar cambios del esquema | Ejecutar el CRUD normal |
+
+Para una explicación más breve de la arquitectura y los comandos de extensión, consulta [`ARQUITECTURA.md`](ARQUITECTURA.md). Para instalar y ejecutar el proyecto, consulta el [`README.md`](../README.md).
