@@ -1,7 +1,13 @@
+"""Modelos ORM: representación Python de las tablas de la base de datos."""
+
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, func
 from .database import Base
 
 class Item(Base):
+    """Item persistido en la tabla ``items``.
+
+    Es el modelo interno de SQLAlchemy; las respuestas HTTP usan ``ItemOut``.
+    """
     __tablename__ = "items"
 
     id = Column(Integer, primary_key=True, index=True)

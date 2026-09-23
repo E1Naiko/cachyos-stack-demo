@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { fetchItems, createItem, updateItem, deleteItem, checkHealth } from './api'
 
+// Componente principal: coordina el estado de la UI con las operaciones del cliente HTTP.
+
 export default function App() {
   const [items, setItems] = useState([])
   const [name, setName] = useState('')
