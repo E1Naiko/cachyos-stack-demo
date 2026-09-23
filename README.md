@@ -239,7 +239,14 @@ cachyos-stack-demo/
 
 ---
 
-## 8) Documentación del código
+## 8) Documentación y estudio
+
+- [`docs/GUIA_ESTUDIO.md`](docs/GUIA_ESTUDIO.md): recorrido pedagógico por módulos, prácticas, preguntas y proyecto final.
+- [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): referencia técnica de la estructura y el flujo de datos.
+
+La guía técnica explica la estructura de carpetas, las responsabilidades de cada módulo, el flujo React → FastAPI → SQLAlchemy → PostgreSQL, los endpoints y cómo extender el ejemplo.
+
+También se añadieron docstrings en los módulos Python para que el código sea navegable desde PyCharm y herramientas de documentación.
 
 La guía técnica [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md) explica la estructura de carpetas, las responsabilidades de cada módulo, el flujo React → FastAPI → SQLAlchemy → PostgreSQL, los endpoints y cómo extender el ejemplo.
 
