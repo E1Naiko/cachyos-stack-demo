@@ -61,7 +61,8 @@ Esta es la función de cada archivo versionado del proyecto. Los archivos genera
 
 - **`README.md`**: punto de entrada para una persona que clona el repositorio. Explica el stack, la instalación en CachyOS, el arranque manual, los endpoints, Alembic, PyCharm y los problemas habituales.
 - **`GUIA_RAPIDA_CACHYOS.md`**: resumen operativo para preparar rápidamente CachyOS, PostgreSQL y el proyecto. Sirve como atajo; el README contiene el contexto más completo.
-- **`setup-cachyos.sh`**: script Bash de instalación. Comprueba comandos disponibles, inicializa y arranca PostgreSQL, crea `devuser` y `testdb`, prepara el entorno virtual Python, instala dependencias, ejecuta migraciones y prepara el frontend. No contiene lógica de la aplicación: automatiza el entorno.
+- **`setup-cachyos.sh`**: script Bash de instalación para CachyOS/Arch. Comprueba comandos disponibles, inicializa y arranca PostgreSQL, crea `devuser` y `testdb`, prepara el entorno virtual Python, instala dependencias, ejecuta migraciones y prepara el frontend. No contiene lógica de la aplicación: automatiza el entorno.
+- **`setup-windows.ps1`**: equivalente para PowerShell. Comprueba Python, Node.js, npm y `psql`, crea el entorno virtual con `Scripts\python.exe`, instala dependencias, ejecuta Alembic y prepara el frontend. PostgreSQL debe estar instalado y ejecutándose previamente porque el script no administra servicios de Windows.
 - **`init-git.sh`**: script auxiliar para inicializar o preparar el repositorio Git local. No participa en la ejecución de React, FastAPI ni PostgreSQL.
 - **`.gitignore`**: indica a Git qué archivos locales no debe versionar, como entornos virtuales, dependencias instaladas, archivos `.env` y caches.
 

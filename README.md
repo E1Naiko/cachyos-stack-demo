@@ -91,7 +91,8 @@ La aplicación permite:
 ├── docs/
 │   ├── GUIA_ESTUDIO.md     # Explicación archivo por archivo
 │   └── ARQUITECTURA.md      # Flujo y decisiones técnicas
-├── setup-cachyos.sh
+├── setup-cachyos.sh          # Setup automatizado para CachyOS/Arch
+├── setup-windows.ps1         # Setup automatizado para Windows PowerShell
 └── README.md
 ```
 
@@ -154,6 +155,55 @@ npm run dev
 ```
 
 La aplicación estará disponible en <http://localhost:5173>.
+
+### Instalación en Windows
+
+El código de la aplicación es multiplataforma. En Windows solo cambian la preparación de PostgreSQL, la activación del entorno virtual y los comandos de shell.
+
+1. Instala Python, Node.js y PostgreSQL. Durante la instalación de Python, habilita **Add Python to PATH**.
+2. Agrega la carpeta `bin` de PostgreSQL al `PATH`, normalmente `C:\Program Files\PostgreSQL\<versión>\bin`.
+3. Asegúrate de que el servicio PostgreSQL esté iniciado.
+4. Abre `psql` o pgAdmin y crea el usuario y la base:
+
+```sql
+CREATE USER devuser WITH PASSWORD 'devpass' CREATEDB;
+CREATE DATABASE testdb OWNER devuser;
+```
+
+También puedes usar PowerShell para ejecutar `psql` si el usuario `postgres` está configurado:
+
+```powershell
+psql -U postgres -c "CREATE USER devuser WITH PASSWORD 'devpass' CREATEDB;"
+psql -U postgres -c "CREATE DATABASE testdb OWNER devuser;"
+```
+
+5. Desde PowerShell, en la raíz del repositorio, ejecuta:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+.\setup-windows.ps1
+```
+
+El script crea los archivos `.env`, prepara `backend\.venv`, instala las dependencias, ejecuta `alembic upgrade head` e instala los paquetes del frontend. No instala PostgreSQL ni modifica servicios de Windows.
+
+Si prefieres hacerlo manualmente:
+
+```powershell
+cd backend
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+Copy-Item .env.example .env
+alembic upgrade head
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# En otra terminal
+cd frontend
+npm install
+Copy-Item .env.example .env
+npm run dev
+```
 
 ### Instalación automatizada en CachyOS/Arch
 
