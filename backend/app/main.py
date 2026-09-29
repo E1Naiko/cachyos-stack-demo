@@ -42,7 +42,7 @@ def health(db: Session = Depends(get_db)):
         db_status = "ok"
     except Exception as e:
         db_status = f"error: {e}"
-    return {"status": "ok", "database": db_status}
+    return {"status": "tabien", "database": db_status}
 
 # CRUD Items
 @app.get("/api/items", response_model=list[schemas.ItemOut])
