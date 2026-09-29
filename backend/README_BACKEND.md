@@ -38,6 +38,26 @@ alembic upgrade head
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+La dependencia `psycopg2-binary` está fijada a una versión que publica wheels para
+CPython 3.14 en Windows. Si ya tienes el entorno creado, vuelve a ejecutar la
+instalación desde `backend`:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Si usas una ruta absoluta en PowerShell, debes usar el operador `&` y no agregar
+`-m python`:
+
+```powershell
+& "C:\ruta\al\proyecto\backend\.venv\Scripts\python.exe" -m pip install -r requirements.txt
+```
+
+El error `pg_config executable not found` aparece cuando pip intenta compilar
+`psycopg2` desde el código fuente. No es necesario instalar `pg_config` para
+este proyecto; actualiza el driver y usa el wheel precompilado declarado en
+`requirements.txt`.
+
 Swagger está disponible en <http://localhost:8000/docs> y el estado de la conexión en <http://localhost:8000/health>.
 
 ## PyCharm
