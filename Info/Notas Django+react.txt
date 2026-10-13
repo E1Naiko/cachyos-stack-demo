@@ -1,0 +1,73 @@
+Hacerlo mediante templates (Full django): Requiere tener todo setupeado en el main, únicamente se comunica todo internamente en el entorno programado de django
+
+Hacerlo mediante react + django: Requiere tener todo en react, y llamar a los routing de la app.tsx
+1ro y mucho MUY IMOPRTANTE, arreglar tema de cors
+
+1)Primero instalar el paquete cors-headers
+
+-pip install django django-cors-headers
+
+2)En settings.py agregar las siguientes instrucciones 
+- 'corsheaders' a Installed_Apps
+
+-   'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+ a MIDDLEWARE
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+]
+
+Al final de settings.py
+
+3) Instalar en el frontend la dependencia de ruteo
+- npm install react-router-dom
+
+Una vez todo instalado y configurado, se pueden crear los componentes mediante react y conectarlos al back django 
+mediante los useState, useEffect y fetchs.
+
+-Crear una componente full-stack (Front + back)
+Empezando desde el front, es ideal seguir la estructura components/(nombreComponente) y dentro crear los archivos nombreComponente.tsx y nombreComponente.css
+
+nombreComponente.tsx deberá hacer el llamado al back desde la ruta especificada en urls.py (Ver más adelante que es este archivo).
+
+
+
+Una vez programado, deberá ser importado al App.tsx y luego configurar el enrutado:
+Ej:
+  
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+      </Routes>
+    </BrowserRouter>
+
+
+Fin parte Front.
+
+Desde el back, es necesario crear el views.py y el urls.py asociado al componente de código. En nuestro stack disponemos de la carpeta SRFR/
+Dentro hay varios archivos pero nos interesa modificar views.py y crear urls.py de ser necesario
+
+-views.py: Dentro de este archivo, debemos definir nuestra vista 
+Ej: 
+	def login(request):
+	- lógica de programación
+
+-urls.py: Dentro de este archivo, debemos definir el enrutamiento hacia nuestra vista
+Ej:
+
+urlpatterns = [
+    path("login/", views.login, name="login"),
+]
+
+"login/": Es la ruta por donde haremos llamado a la api
+"views.login": hace referencia a la función definida en views.py
+"name="login"" hace referencia a como será llamada la función 
+
+Una vez definido el código deberemos modificar el urls.py del "main" en nuestro caso es el urls.py de la carpeta IngenieriaEnSoftwareG12
+Dentro del archivo IngenieriaEnSoftwareG12/urls.py deberemos agregar el path hacia nuestro nuevo código definido de la siguiente forma:
+
+	path("", include("SRFR.urls")),
+
+Fin parte del Back
