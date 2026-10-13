@@ -1,0 +1,28 @@
+# Credenciales - NUNCA subir
+.env
+
+# Base de datos local de desarrollo
+db.sqlite3
+
+# Archivos subidos en desarrollo (comprobantes)
+media/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Entornos virtuales
+venv/
+.venv/
+
+# node_modules
+frontend/node_modules/
+
+#Frontend extras
+
+frontend/public/
+frontend/src/assets/
+
+# IDE
+.idea/
+.vscode/
